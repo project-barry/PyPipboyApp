@@ -1,3 +1,12 @@
+> [!IMPORTANT]
+> **Project Barry's additions to this fork were built with a coding agent:
+> [Claude Code](https://www.anthropic.com/claude-code), running Anthropic's
+> Claude Opus 5.5 (`claude-opus-5-5`).** This applies only to what Project
+> Barry added (the [`barry/`](barry/) folder): Claude wrote that code, its commit messages and this
+> note. Everything else is upstream [PyPipboyApp](https://github.com/matzman666/PyPipboyApp)'s work, by its own authors. People set
+> the goals, made the decisions and did the hands-on testing. Review the code
+> before you rely on it. See [a note from lavachemist](https://github.com/project-barry), a human, on Project Barry and generative AI.
+
 > **Project Barry fork.** This fork adds [`barry/`](barry/), a port of PyPipboyApp to a
 > [Barry Launcher](https://github.com/project-barry/barry-launcher) app: the Pip-Boy on the AYN Thor's
 > bottom screen under PB-OS. See [barry/README.md](barry/README.md). The rest of the repository is
