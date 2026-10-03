@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "id": "io.github.project-barry.pipboy",
+  "name": "Pip-Boy",
+  "version": "1.0.0",
+  "main": "main.qml",
+  "service": "service.py",
+  "icon": "icon.svg",
+  "description": "Fallout 4's Pip-Boy on the bottom screen: status, inventory, quests, map and radio from the game, ported from PyPipboyApp. Turn on the Pip-Boy app in the game's settings.",
+  "author": "Project Barry; PyPipboyApp and PyPipboy by matzman666 and contributors",
+  "homepage": "https://github.com/project-barry/PyPipboyApp"
+}

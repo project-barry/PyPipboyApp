@@ -1,3 +1,8 @@
+> **Project Barry fork.** This fork adds [`barry/`](barry/), a port of PyPipboyApp to a
+> [Barry Launcher](https://github.com/project-barry/barry-launcher) app: the Pip-Boy on the AYN Thor's
+> bottom screen under PB-OS. See [barry/README.md](barry/README.md). The rest of the repository is
+> upstream's PyQt5 application, unchanged.
+
 
 ![python_version](https://img.shields.io/badge/Python-3.0-green.svg) ![dependencies](https://img.shields.io/badge/Dependencies-PyQt5%2C%20PyPipboy-green.svg) ![license_gpl3](https://img.shields.io/badge/License-GPL%203.0-green.svg)
 

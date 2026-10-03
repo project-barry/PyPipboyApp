@@ -1,0 +1,60 @@
+# The Barry Launcher app in barry/: checked against a stand-in game, packed
+# with Barry Launcher's barry-app tool, and released on v* tags.
+name: barry-app
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+    paths: ["barry/**", "tools/fake_fallout4.py", ".github/workflows/barry-app.yml"]
+  pull_request:
+    paths: ["barry/**", "tools/fake_fallout4.py", ".github/workflows/barry-app.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: barry-app tool
+        run: |
+          mkdir -p .barry-tools
+          for f in barry-app barry_apps.py; do
+            curl -fsSL "https://raw.githubusercontent.com/project-barry/barry-launcher-apps/main/tools/$f" -o ".barry-tools/$f"
+          done
+      - name: Check
+        run: python3 .barry-tools/barry-app check barry
+      - name: Service against the stand-in game
+        run: |
+          python3 tools/fake_fallout4.py &
+          sleep 1
+          BARRY_SERVICE_PORT=47900 BARRY_SERVICE_TOKEN=ci BARRY_APP_DATA="$RUNNER_TEMP/pipboy" python3 -s barry/service.py &
+          for i in $(seq 20); do
+            sleep 0.5
+            state=$(curl -fs -H "X-Barry-Token: ci" "http://127.0.0.1:47900/view?since=0" \
+                    | python3 -c "import json,sys; d=json.load(sys.stdin)['sections']; print(d['connection']['state'], len(d.get('inventory') or {}))" || true)
+            echo "$state"
+            case "$state" in "connected 8") break;; esac
+          done
+          [ "$state" = "connected 8" ]
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:47900/view)" = 403
+          curl -fs -H "X-Barry-Token: ci" -d '{"do":"stimpak"}' http://127.0.0.1:47900/action
+      - name: Pack
+        run: |
+          version=$(python3 -c "import json; print(json.load(open('barry/barry-app.json'))['version'])")
+          python3 .barry-tools/barry-app pack barry -o "pipboy-$version.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pipboy
+          path: pipboy-*.zip
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" pipboy-*.zip --title "Pip-Boy for Barry Launcher $GITHUB_REF_NAME" --notes "Install pipboy-*.zip with the Barry Launcher plugin (Apps › Install app…) or barry-app install. Needs a Barry Launcher with app services. See barry/README.md."
