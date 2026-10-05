@@ -7,6 +7,9 @@
 > the goals, made the decisions and did the hands-on testing. Review the code
 > before you rely on it. See [a note from lavachemist](https://github.com/project-barry), a human, on Project Barry and generative AI.
 
+> [!TIP]
+> **Join the Project Barry community on Discord:** https://discord.gg/KSCCwcGG3
+
 > **Project Barry fork.** This fork adds [`barry/`](barry/), a port of PyPipboyApp to a
 > [Barry Launcher](https://github.com/project-barry/barry-launcher) app: the Pip-Boy on the AYN Thor's
 > bottom screen under PB-OS. See [barry/README.md](barry/README.md). The rest of the repository is
