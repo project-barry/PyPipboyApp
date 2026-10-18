@@ -25,6 +25,9 @@ Pip-Boy phone app.
   your marker. The local map is the game's own live picture of the area around you.
 - **RADIO**: turn stations on and off.
 - Everything follows the Pip-Boy colour you set in the game.
+- A CRT screen: the app is drawn bent like a convex tube, with scan lines, a soft glow, a rolling
+  band and a faint flicker (`shaders/crt.frag`). The **CRT** button at the top turns it off. The bend
+  is gentle because taps land where things would be on a flat screen.
 
 The world map's picture is the game's own. It belongs to Bethesda, so this repository and the app's
 zip don't carry it (that is also why the original PyPipboyApp's repository ships no graphics): the
@@ -87,6 +90,8 @@ two parts:
   map into a tinted PNG and passes the app's commands on to the game.
 - **`worldmap.py`** finds Fallout 4 in this device's Steam libraries and reads the Pip-Boy's world map
   out of its archives (`Textures\Interface\Pip-Boy\WorldMap_d.DDS`), for `service.py` to tint.
+- **`shaders/`**: the CRT shader. `tools/build-shaders.sh` compiles `crt.frag` into `crt.frag.qsb`
+  with Qt 6's `qsb`; the `.qsb` is kept in the repository.
 - **`main.qml`** and **`qml/`** are the window. They ask the service for changes a few times a second
   (`barry.request`) and draw them.
 

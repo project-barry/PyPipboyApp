@@ -18,11 +18,35 @@ Rectangle {
     color: Pip.bg
     Component.onCompleted: Pip.barry = barry
 
+    // The CRT: the whole app drawn through shaders/crt.frag (bent like a
+    // convex tube, scan lines, glow, a rolling band, flicker). The bend is
+    // gentle because taps land where things would be on a flat screen.
+    // Its clock steps 20 times a second rather than every frame, to leave
+    // the GPU to the game.
+    readonly property bool crt: saved.crt
+    property real crtTime: 0
+    Timer {
+        interval: 50
+        repeat: true
+        running: app.crt
+        onTriggered: app.crtTime = (app.crtTime + 0.05) % 3600
+    }
+    layer.enabled: crt
+    layer.smooth: true
+    layer.effect: ShaderEffect {
+        property real time: app.crtTime
+        property real warp: 0.06
+        property real lines: app.height / (5 * Pip.s)
+        property size texel: Qt.size(1 / app.width, 1 / app.height)
+        fragmentShader: "shaders/crt.frag.qsb"
+    }
+
     Settings {
         id: saved
         location: app.barry.dataDirUrl + "pipboy.ini"
         property int tab: 0
         property var sub: [0, 0, 0, 0, 0]
+        property bool crt: true
     }
 
     // The service's view: only the sections that changed since the last
@@ -70,9 +94,10 @@ Rectangle {
         pickSub(s)
     }
 
-    // A faint scanline texture, like the Pip-Boy's screen.
+    // A faint scanline texture, like the Pip-Boy's screen (the CRT draws its own).
     Canvas {
         anchors.fill: parent
+        visible: !app.crt
         opacity: 0.35
         property color ink: Pip.faint
         onInkChanged: requestPaint()
@@ -85,13 +110,14 @@ Rectangle {
         }
     }
 
-    // Top: the tabs, the game's date and time, close.
+    // Top: the tabs, the game's date and time, the CRT switch, close.
     Item {
         id: top
         width: parent.width
         height: 104 * Pip.s
 
         TabRow {
+            id: topTabs
             x: 16 * Pip.s
             anchors.verticalCenter: parent.verticalCenter
             tabs: app.tabs
@@ -99,14 +125,34 @@ Rectangle {
             fontSize: Pip.large * 1.1
             onPicked: i => saved.tab = i
         }
+        // The date and time, or only the time where both don't fit.
         PipText {
-            anchors.right: close.left
+            id: when
+            anchors.right: crtButton.left
             anchors.rightMargin: 24 * Pip.s
             anchors.verticalCenter: parent.verticalCenter
             visible: Pip.player !== null
-            text: Pip.player ? Pip.date(Pip.player) + "   " + Pip.clock(Pip.player.hour) : ""
+            readonly property string full: Pip.player ? Pip.date(Pip.player) + "   " + Pip.clock(Pip.player.hour) : ""
+            readonly property real room: crtButton.x - anchors.rightMargin - topTabs.x - topTabs.width - 24 * Pip.s
+            text: fullWidth.width <= room ? full : (Pip.player ? Pip.clock(Pip.player.hour) : "")
             color: Pip.dim
             font.pixelSize: Pip.small
+            TextMetrics {
+                id: fullWidth
+                font: when.font
+                text: when.full
+            }
+        }
+        PipButton {
+            id: crtButton
+            anchors.right: close.left
+            anchors.rightMargin: 16 * Pip.s
+            anchors.verticalCenter: parent.verticalCenter
+            implicitWidth: 96 * Pip.s
+            text: "CRT"
+            fontSize: Pip.small
+            on: app.crt
+            onClicked: saved.crt = !saved.crt
         }
         PipButton {
             id: close
