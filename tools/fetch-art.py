@@ -2,36 +2,46 @@
 """Download the Pip-Boy art into barry/art/ for the app to use.
 
 The Vault Boy, S.P.E.C.I.A.L. and weapon pictures are Bethesda's, so this
-repository does not carry them. This script downloads them, checks each file
-against its hash, and turns each into a one-color mask: white, with the
+repository does not carry them. Each is a one-color mask: white, with the
 picture's brightness as its opacity. The app paints the mask in the game's
 Pip-Boy color (qml/PipArt.qml), the way the game shows its pictures.
+art/weapons.json names the weapons of each weapon picture, for the service
+to match the game's weapons with (service.py weapon_picture).
+
+    python3 -I tools/fetch-art.py
+
+downloads the finished masks: one bundle (BUNDLE), checked against its hash,
+from this repository's art-N release. The build runs this before packing
+(.github/workflows/barry-app.yml). Without barry/art/ the app still works
+and draws its own plain figure.
+
+    python3 -I tools/fetch-art.py --from-sources [BUNDLE.tar.gz]
+
+makes the masks from the pictures themselves (needs Pillow), each checked
+against its hash, and writes the bundle for a new art-N release:
 
 - The Vault Boy and S.P.E.C.I.A.L.: aviralmehrotra/Fallout4-Pip-Boy at a
   fixed commit.
 - The weapons: the Fallout Wiki (fallout.wiki), one picture for each Fallout 4
-  weapon page that has one (base game, add-ons and Creation Club). It also
-  writes art/weapons.json, the weapon names of each picture, for the service
-  to match the game's weapons with (service.py weapon_picture).
+  weapon page that has one (base game, add-ons and Creation Club). The wiki
+  turns away GitHub's build machines, which is why the build uses the bundle.
 
-    python3 -I tools/fetch-art.py        # needs Pillow (pip install pillow)
-
-The build runs it before packing (.github/workflows/barry-app.yml). Without
-barry/art/ the app still works and draws its own plain figure. A wiki picture
-that has changed since (its hash differs) is left out with a warning; the
-service then shows the picture of the weapon's ammo or kind instead.
+Then upload the bundle to a new art-N release and change BUNDLE here.
 """
 
+import gzip
 import hashlib
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tarfile
 
-from PIL import Image, ImageChops
-
-Image.MAX_IMAGE_PIXELS = None  # one wiki picture is 12036 x 5100
+# The finished masks: the art-N release asset and its hash.
+BUNDLE = ("https://github.com/project-barry/PyPipboyApp/releases/download/art-1/pipboy-art-1.tar.gz",
+          "59b5860dec35d132b9dabff42de3b93c47d663b5590b2f53ac6ca4f4297db810")
 
 REPO = "aviralmehrotra/Fallout4-Pip-Boy"
 COMMIT = "246bd9f17d9b4648e7ef410c4c3b5cca84689796"
@@ -394,6 +404,8 @@ def mask(data, size=None):
     """White, with the picture's brightness (stretched to the full range)
     as its opacity: dark lines drop out, light areas take the color. Made
     to fit size (width, height) if given."""
+    from PIL import Image, ImageChops
+    Image.MAX_IMAGE_PIXELS = None  # one wiki picture is 12036 x 5100
     im = Image.open(io.BytesIO(data)).convert("RGBA")
     alpha = im.getchannel("A")
     lum = im.convert("L")
@@ -416,13 +428,46 @@ def mask(data, size=None):
     return out
 
 
+def fetch_bundle():
+    url, sha256 = BUNDLE
+    data = fetch(url, sha256)
+    if data is None:
+        return 1
+    shutil.rmtree(OUT, ignore_errors=True)
+    os.makedirs(OUT)
+    with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
+        tar.extractall(OUT, filter="data")
+    count = sum(len(files) for _, _, files in os.walk(OUT))
+    print(f"fetch-art: {count} files in {os.path.relpath(OUT)}")
+    return 0
+
+
+def write_bundle(path):
+    """art/ as a .tar.gz, the same bytes for the same pictures."""
+    raw = io.BytesIO()
+    with tarfile.open(fileobj=raw, mode="w", format=tarfile.PAX_FORMAT) as tar:
+        for root, dirs, files in os.walk(OUT):
+            dirs.sort()
+            for f in sorted(files):
+                full = os.path.join(root, f)
+                info = tar.gettarinfo(full, os.path.relpath(full, OUT))
+                info.mtime, info.uid, info.gid, info.uname, info.gname, info.mode = 0, 0, 0, "", "", 0o644
+                with open(full, "rb") as fh:
+                    tar.addfile(info, fh)
+    with open(path, "wb") as fh, gzip.GzipFile(fileobj=fh, mode="wb", mtime=0, filename="") as gz:
+        gz.write(raw.getvalue())
+    with open(path, "rb") as fh:
+        print(f"fetch-art: {path}: sha256 {hashlib.sha256(fh.read()).hexdigest()}")
+
+
 def save(image, name):
     dest = os.path.normpath(os.path.join(OUT, name))
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     image.save(dest, optimize=True)
 
 
-def main():
+def from_sources(bundle):
+    shutil.rmtree(OUT, ignore_errors=True)
     missing = 0
     for name, (path, sha256) in ART.items():
         data = fetch(f"https://raw.githubusercontent.com/{REPO}/{COMMIT}/{path}", sha256)
@@ -442,7 +487,17 @@ def main():
         json.dump(names, fh, indent=1, ensure_ascii=False)
     print(f"fetch-art: {len(ART) + len(WEAPONS) - missing} pictures in {os.path.relpath(OUT)}"
           + (f", {missing} left out (see the warnings)" if missing else ""))
+    if missing:
+        print("fetch-art: no bundle with pictures missing", file=sys.stderr)
+        return 1
+    write_bundle(bundle)
     return 0
+
+
+def main():
+    if sys.argv[1:2] == ["--from-sources"]:
+        return from_sources(sys.argv[2] if len(sys.argv) > 2 else "pipboy-art.tar.gz")
+    return fetch_bundle()
 
 
 if __name__ == "__main__":

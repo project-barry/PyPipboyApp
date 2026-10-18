@@ -30,13 +30,17 @@ The world map is a grid with markers and has no picture. The game's map picture 
 so it isn't included. That is also why the original PyPipboyApp's repository ships no graphics.
 
 The Vault Boy on STATUS, the S.P.E.C.I.A.L. pictures and the weapon pictures are Bethesda's too, so
-this repository doesn't carry them either. `tools/fetch-art.py` downloads them at build time into
-`barry/art/`, which git ignores, checking each file against its hash. The release zip has them.
+this repository doesn't carry them either. At build time `tools/fetch-art.py` downloads them into
+`barry/art/`, which git ignores, as one bundle from the
+[art-1 release](https://github.com/project-barry/PyPipboyApp/releases/tag/art-1), checked against its
+hash. The release zip has them. The bundle was made with `tools/fetch-art.py --from-sources` (needs
+Pillow), which takes the pictures from their sources, each checked against its hash:
 
 - The Vault Boy and S.P.E.C.I.A.L. come from
   [aviralmehrotra/Fallout4-Pip-Boy](https://github.com/aviralmehrotra/Fallout4-Pip-Boy) at a fixed commit.
 - The weapons come from the [Fallout Wiki](https://fallout.wiki/wiki/Fallout_4_Weapons): 159 pictures
-  for the Fallout 4 weapons, add-ons and Creation Club included.
+  for the Fallout 4 weapons, add-ons and Creation Club included. The wiki turns away GitHub's build
+  machines, which is why the build uses the bundle.
 
 The app paints them in the Pip-Boy color. The service picks each weapon's picture
 (`weapon_picture` in `service.py`):
@@ -87,7 +91,7 @@ two parts:
 and acts on the app's commands.
 
 ```sh
-python3 -I tools/fetch-art.py              # once: the pictures (needs Pillow)
+python3 -I tools/fetch-art.py              # once: the pictures
 python3 tools/fake_fallout4.py &           # the "game", on port 27000
 barry-app run barry                        # the app and its service, in a window
 ```

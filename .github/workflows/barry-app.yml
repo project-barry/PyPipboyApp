@@ -29,9 +29,7 @@ jobs:
             curl -fsSL "https://raw.githubusercontent.com/project-barry/barry-launcher-apps/main/tools/$f" -o ".barry-tools/$f"
           done
       - name: Pip-Boy art
-        run: |
-          pip install "pillow>=11,<13"
-          python3 tools/fetch-art.py
+        run: python3 tools/fetch-art.py
       - name: Check
         run: python3 .barry-tools/barry-app check barry
       - name: Service against the stand-in game
