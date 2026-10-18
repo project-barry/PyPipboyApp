@@ -437,7 +437,12 @@ def fetch_bundle():
     os.makedirs(OUT)
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
         tar.extractall(OUT, filter="data")
-    count = sum(len(files) for _, _, files in os.walk(OUT))
+    # The bundle's times are 0 (1970), which a zip can't hold: make them now.
+    count = 0
+    for root, _, files in os.walk(OUT):
+        for f in files:
+            os.utime(os.path.join(root, f))
+            count += 1
     print(f"fetch-art: {count} files in {os.path.relpath(OUT)}")
     return 0
 
