@@ -35,7 +35,7 @@ Rectangle {
     layer.smooth: true
     layer.effect: ShaderEffect {
         property real time: app.crtTime
-        property real warp: 0.06
+        property real warp: 0.045
         property real lines: app.height / (5 * Pip.s)
         property size texel: Qt.size(1 / app.width, 1 / app.height)
         fragmentShader: "shaders/crt.frag.qsb"
