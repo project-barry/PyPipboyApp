@@ -12,6 +12,9 @@ carry BARRY_SERVICE_TOKEN (X-Barry-Token header, or ?token= for images).
   GET  /localmap.png     the last local map snapshot, tinted
   GET  /worldmap.png     the game's world map picture, tinted (read from the
                          Fallout 4 on this device; 404 without it)
+  GET  /vaultboy/N.svg?body=B&head=H
+                         pose N of the game's walking Vault Boy, tinted (also
+                         read from the game; 404 without it)
   GET  /discover         games that answer on the network (UDP 28000)
   POST /action {"do": ...}  connect {host}, disconnect, stimpak, radaway,
                          use {id}, drop {id, count}, radio {id},
@@ -43,6 +46,7 @@ sys.path.insert(0, HERE)
 from pypipboy.datamanager import PipboyDataManager, ePipboyValueType  # noqa: E402
 from pypipboy.network import NetworkChannel  # noqa: E402
 from worldmap import WorldMap, placement  # noqa: E402
+from vaultboy import VaultBoy  # noqa: E402
 
 PORT = int(os.environ.get("BARRY_SERVICE_PORT") or 0)
 TOKEN = os.environ.get("BARRY_SERVICE_TOKEN", "")
@@ -172,6 +176,7 @@ class Pipboy:
         self.map_info = None
         self.map_serial = 0
         self.worldmap = WorldMap(DATA)
+        self.vaultboy = VaultBoy(DATA)
         self.dirty.set()
 
     # Settings ----------------------------------------------------------
@@ -306,6 +311,12 @@ class Pipboy:
                 # "n" changes with the colour, so the app asks for the picture again.
                 out["world"]["picture"] = dict(where, n="%.3f,%.3f,%.3f" % tuple(out["status"]["color"])) \
                     if where and out["status"] else None
+            if out["status"] is not None:
+                walk = self.vaultboy.info(out["status"]["bodyFlags"], out["status"]["headFlags"]) \
+                    if self.vaultboy.ready else None
+                # "n" changes with the colour, so the app asks for the poses again.
+                out["status"]["vaultboy"] = dict(walk, n="%.3f,%.3f,%.3f" % tuple(out["status"]["color"])) \
+                    if walk else None
             changed = False
             for name, section in out.items():
                 text = json.dumps(section, separators=(",", ":"))
@@ -407,7 +418,10 @@ def build_status(root):
     flags = {k: bool(val(s, k, default=False)) for k in (
         "IsDataUnavailable", "IsLoading", "IsPlayerDead", "IsInVats", "IsInVatsPlayback", "IsPlayerInDialogue",
         "IsPipboyNotEquipped", "IsPlayerPipboyLocked", "IsMenuOpen", "IsInAnimation", "IsPlayerMovementLocked")}
-    return {"color": color if isinstance(color, list) and len(color) == 3 else DEFAULT_COLOR, "flags": flags}
+    stats = child(root, "Stats")
+    return {"color": color if isinstance(color, list) and len(color) == 3 else DEFAULT_COLOR, "flags": flags,
+            "bodyFlags": int(val(stats, "BodyFlags", default=0) or 0),
+            "headFlags": int(val(stats, "HeadFlags", default=0) or 0)}
 
 
 def build_player(root):
@@ -750,6 +764,18 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(200, data, "image/png")
             else:
                 self.send(404, b'{"error":"no world map picture"}')
+        elif url.path.startswith("/vaultboy/") and url.path.endswith(".svg"):
+            try:
+                pose = int(url.path[len("/vaultboy/"):-len(".svg")])
+                body = int((query.get("body") or ["0"])[0])
+                head = int((query.get("head") or ["0"])[0])
+            except ValueError:
+                pose = body = head = -1
+            data = self.pipboy.vaultboy.svg(body, head, pose, self.pipboy.color()) if min(pose, body, head) >= 0 else b""
+            if data:
+                self.send(200, data, "image/svg+xml")
+            else:
+                self.send(404, b'{"error":"no such Vault Boy"}')
         elif url.path == "/discover":
             hosts = discover()
             self.send(200, json.dumps({"hosts": hosts}).encode())
@@ -802,6 +828,7 @@ def main():
     threading.Thread(target=pipboy.connector, daemon=True).start()
     threading.Thread(target=pipboy.builder, daemon=True).start()
     threading.Thread(target=lambda: pipboy.worldmap.load() and pipboy.changed(), daemon=True).start()
+    threading.Thread(target=lambda: pipboy.vaultboy.load() and pipboy.changed(), daemon=True).start()
     log.info("serving the app on 127.0.0.1:%d; game at %s", PORT, pipboy.host)
     try:
         srv.serve_forever()

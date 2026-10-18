@@ -35,6 +35,10 @@ first time the app runs, `worldmap.py` reads it from the Fallout 4 installed on 
 of the game's archives, and keeps a copy in the app's data folder. When the game runs on another
 computer, the world map is a grid with markers. Far Harbor and Nuka-World have no picture yet.
 
+The Vault Boy on STATUS walks, as in the game: `vaultboy.py` reads the game's own clips (the walk, with
+the slings, crutches and bandages it shows for crippled limbs, and the heads) from the same Fallout 4
+and turns them into pictures with `swf.py`. Without the game on the device, he stands still.
+
 The Vault Boy on STATUS, the S.P.E.C.I.A.L. pictures and the weapon pictures are Bethesda's too, so
 this repository doesn't carry them either. At build time `tools/fetch-art.py` downloads them into
 `barry/art/`, which git ignores, as one bundle from the
@@ -88,6 +92,8 @@ two parts:
   listed in its README) and keeps the game's data. It serves the app what changed, section by section,
   on `127.0.0.1` with a token that Barry Launcher gives to both sides. It also turns the game's local
   map into a tinted PNG and passes the app's commands on to the game.
+- **`vaultboy.py`** reads the Vault Boy's Flash clips out of the game's interface archive, and
+  **`swf.py`** turns their vector shapes into SVG, pose by pose, for `service.py` to tint.
 - **`worldmap.py`** finds Fallout 4 in this device's Steam libraries and reads the Pip-Boy's world map
   out of its archives (`Textures\Interface\Pip-Boy\WorldMap_d.DDS`), for `service.py` to tint.
 - **`shaders/`**: the CRT shader. `tools/build-shaders.sh` compiles `crt.frag` into `crt.frag.qsb`

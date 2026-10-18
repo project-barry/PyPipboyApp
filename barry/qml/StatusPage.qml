@@ -1,5 +1,6 @@
 // STAT > STATUS: limb condition around a figure, Stimpak and RadAway,
 // damage and resistances, and the active effects.
+pragma ComponentBehavior: Bound
 import QtQuick
 
 Item {
@@ -7,24 +8,71 @@ Item {
     readonly property var p: Pip.player
     readonly property var limbs: p ? p.limbs : ({})
 
-    // The figure: the Vault Boy from art/ (tools/fetch-art.py), or a plain
-    // outline drawn here without it, with each limb's condition beside it.
+    // The figure: the game's own walking Vault Boy (the service reads him from
+    // the Fallout 4 on this device), else the still one from art/
+    // (tools/fetch-art.py), else a plain outline drawn here; with each limb's
+    // condition beside it.
     Item {
         id: body
         width: parent.width * 0.5
         height: parent.height
 
+        // The walk: every pose loaded, then one shown at a time, at the
+        // game's pace, while this page shows.
+        Item {
+            id: walk
+            anchors.fill: figure
+            readonly property var vb: Pip.status ? Pip.status.vaultboy : null
+            readonly property int count: vb ? vb.ms.length : 0
+            property int pose: 0
+            property int loaded: 0
+            readonly property bool ready: count > 0 && loaded === count
+            onVbChanged: if (pose >= count) pose = 0
+            function tally() {
+                let n = 0
+                for (let i = 0; i < poses.count; i++) {
+                    const p = poses.itemAt(i) as Image
+                    if (p && p.status === Image.Ready)
+                        n++
+                }
+                loaded = n
+            }
+            Repeater {
+                id: poses
+                model: walk.count
+                Image {
+                    required property int index
+                    anchors.fill: parent
+                    fillMode: Image.PreserveAspectFit
+                    sourceSize.height: height
+                    asynchronous: true
+                    smooth: true
+                    visible: walk.ready && index === walk.pose
+                    source: walk.vb && Pip.barry ? Pip.barry.serviceUrl + "vaultboy/" + index + ".svg?token="
+                                                   + Pip.barry.serviceToken + "&body=" + walk.vb.body + "&head="
+                                                   + walk.vb.head + "&n=" + walk.vb.n : ""
+                    onStatusChanged: walk.tally()
+                }
+            }
+            Timer {
+                interval: walk.count ? walk.vb.ms[Math.min(walk.pose, walk.count - 1)] : 1000
+                repeat: true
+                running: walk.ready && page.visible
+                onTriggered: walk.pose = (walk.pose + 1) % walk.count
+            }
+        }
         PipArt {
             id: vaultBoy
             anchors.fill: figure
             name: "vaultboy"
+            visible: !walk.ready
         }
         Canvas {
             id: figure
             anchors.centerIn: parent
             width: 300 * Pip.s
             height: 520 * Pip.s
-            visible: !vaultBoy.ready
+            visible: !walk.ready && !vaultBoy.ready
             property var limbs: page.limbs
             property color ink: Pip.color
             property color hurt: Pip.faint

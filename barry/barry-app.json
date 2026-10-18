@@ -2,7 +2,7 @@
   "format": 1,
   "id": "io.github.project-barry.pipboy",
   "name": "Pip-Boy",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "main": "main.qml",
   "service": "service.py",
   "icon": "icon.svg",
