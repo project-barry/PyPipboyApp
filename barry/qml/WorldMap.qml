@@ -1,8 +1,8 @@
 // MAP > WORLD: the places the game has shown you, the player, quest
-// targets, your marker and your power armor, on a grid (the game's map
-// picture is Bethesda's, so it is not here). Drag to move, pinch (or the
-// mouse wheel) to zoom; tap a place to fast travel there, or an empty spot
-// to put your marker there.
+// targets, your marker and your power armor, on the game's own map picture
+// (the service reads it from the Fallout 4 on this device; without it, a
+// grid). Drag to move, pinch (or the mouse wheel) to zoom; tap a place to
+// fast travel there, or an empty spot to put your marker there.
 import QtQuick
 
 Item {
@@ -42,10 +42,29 @@ Item {
     property var pendingMarker: null   // {x, y}: where a tap would put the marker
     readonly property var places: w ? w.locations : []
 
-    // The grid.
+    // The game's map picture, placed by the service in the map's 0-1 units.
+    readonly property var pic: w ? w.picture : null
+    Image {
+        id: picture
+        visible: map.pic !== null && status === Image.Ready
+        x: map.pic ? (map.pic.u0 - map.cx) * map.span + map.width / 2 : 0
+        y: map.pic ? (map.pic.v0 - map.cy) * map.span + map.height / 2 : 0
+        width: map.pic ? map.pic.size * map.span : 0
+        height: width
+        source: map.pic && Pip.barry ? Pip.barry.serviceUrl + "worldmap.png?token=" + Pip.barry.serviceToken
+                                       + "&n=" + map.pic.n : ""
+        sourceSize: Qt.size(2048, 2048)
+        asynchronous: true
+        cache: false
+        smooth: true
+        mipmap: true
+    }
+
+    // The grid, without the picture.
     Canvas {
         id: grid
         anchors.fill: parent
+        visible: !picture.visible
         property real cx: map.cx
         property real cy: map.cy
         property real span: map.span

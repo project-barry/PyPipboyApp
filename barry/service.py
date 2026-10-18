@@ -10,6 +10,8 @@ carry BARRY_SERVICE_TOKEN (X-Barry-Token header, or ?token= for images).
   GET  /view?since=REV   the sections of the view that changed after REV:
                          {"rev": N, "sections": {"player": {...}, ...}}
   GET  /localmap.png     the last local map snapshot, tinted
+  GET  /worldmap.png     the game's world map picture, tinted (read from the
+                         Fallout 4 on this device; 404 without it)
   GET  /discover         games that answer on the network (UDP 28000)
   POST /action {"do": ...}  connect {host}, disconnect, stimpak, radaway,
                          use {id}, drop {id, count}, radio {id},
@@ -40,6 +42,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from pypipboy.datamanager import PipboyDataManager, ePipboyValueType  # noqa: E402
 from pypipboy.network import NetworkChannel  # noqa: E402
+from worldmap import WorldMap, placement  # noqa: E402
 
 PORT = int(os.environ.get("BARRY_SERVICE_PORT") or 0)
 TOKEN = os.environ.get("BARRY_SERVICE_TOKEN", "")
@@ -168,6 +171,7 @@ class Pipboy:
         self.map_png = b""
         self.map_info = None
         self.map_serial = 0
+        self.worldmap = WorldMap(DATA)
         self.dirty.set()
 
     # Settings ----------------------------------------------------------
@@ -297,6 +301,11 @@ class Pipboy:
         with self.view_lock:
             if out["local"] is not None:
                 out["local"]["image"] = self.map_info
+            if out["world"] is not None:
+                where = placement(out["world"]["extents"]) if self.worldmap.ready else None
+                # "n" changes with the colour, so the app asks for the picture again.
+                out["world"]["picture"] = dict(where, n="%.3f,%.3f,%.3f" % tuple(out["status"]["color"])) \
+                    if where and out["status"] else None
             changed = False
             for name, section in out.items():
                 text = json.dumps(section, separators=(",", ":"))
@@ -735,6 +744,12 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(200, data, "image/png")
             else:
                 self.send(404, b'{"error":"no map yet"}')
+        elif url.path == "/worldmap.png":
+            data = self.pipboy.worldmap.picture(self.pipboy.color())
+            if data:
+                self.send(200, data, "image/png")
+            else:
+                self.send(404, b'{"error":"no world map picture"}')
         elif url.path == "/discover":
             hosts = discover()
             self.send(200, json.dumps({"hosts": hosts}).encode())
@@ -786,6 +801,7 @@ def main():
     signal.signal(signal.SIGTERM, lambda *_: os._exit(0))
     threading.Thread(target=pipboy.connector, daemon=True).start()
     threading.Thread(target=pipboy.builder, daemon=True).start()
+    threading.Thread(target=lambda: pipboy.worldmap.load() and pipboy.changed(), daemon=True).start()
     log.info("serving the app on 127.0.0.1:%d; game at %s", PORT, pipboy.host)
     try:
         srv.serve_forever()
