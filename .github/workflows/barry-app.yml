@@ -6,9 +6,9 @@ on:
   push:
     branches: [master]
     tags: ["v*"]
-    paths: ["barry/**", "tools/fake_fallout4.py", ".github/workflows/barry-app.yml"]
+    paths: ["barry/**", "tools/fake_fallout4.py", "tools/fetch-art.py", ".github/workflows/barry-app.yml"]
   pull_request:
-    paths: ["barry/**", "tools/fake_fallout4.py", ".github/workflows/barry-app.yml"]
+    paths: ["barry/**", "tools/fake_fallout4.py", "tools/fetch-art.py", ".github/workflows/barry-app.yml"]
   workflow_dispatch:
 
 permissions:
