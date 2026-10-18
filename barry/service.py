@@ -26,6 +26,7 @@ To try it without Barry Launcher:
 import json
 import logging
 import os
+import re
 import signal
 import struct
 import sys
@@ -56,6 +57,25 @@ CATEGORIES = [("weapons", 1 << 1), ("apparel", 1 << 2), ("aid", 1 << 3), ("junk"
 DAMAGE_TYPES = {1: "phys", 2: "poison", 3: "unknown", 4: "energy", 5: "unknown", 6: "rad", 10: "ammo"}
 CARD_LABELS = {"$val": "Value", "$wt": "Weight", "$acc": "Accuracy", "$rng": "Range",
                "$ROF": "Rate of fire", "$speed": "Speed"}
+
+# More names for weapon pictures (weapon_picture): a laser or plasma gun with
+# a rifle stock is named a rifle, and these pictures show the rifles.
+PICTURE_NAMES = {"Laser Rifle": "Wazer Wifle", "Plasma Rifle": "Experiment 18-A"}
+# Weapon pictures for weapons the name doesn't match (weapon_picture): the
+# first of these found in the ammo's name, and the weapon whose picture
+# stands for that ammo.
+AMMO_PICTURES = [(".45-70", "Lever Action Rifle"), ("10mm", "10mm Pistol"), (".38", "Pipe Gun"),
+                 (".44", ".44 Pistol"), (".45", "Combat Rifle"), (".308", "Hunting Rifle"),
+                 (".50", "Hunting Rifle"), ("5.56", "Assault Rifle"), ("5mm", "Minigun"),
+                 ("2mm", "Gauss Rifle"), ("7.62", "Handmade Rifle"), ("shotgun", "Combat Shotgun"),
+                 ("fusion core", "Gatling Laser"), ("fusion cell", "Laser Gun"), ("plasma", "Plasma Gun"),
+                 ("flamer", "Flamer"), ("cryo", "Cryolator"), ("gamma", "Gamma Gun"),
+                 ("alien", "Alien Blaster Pistol"), ("railway", "Railway Rifle"), ("syringe", "Syringer"),
+                 ("flare", "Flare Gun"), ("missile", "Missile Launcher"), ("mini nuke", "Fat Man"),
+                 ("cannonball", "Broadsider"), ("harpoon", "Harpoon Gun"), ("junk", "Junk Jet")]
+# ...and for the rest, by kind.
+MELEE_PICTURE, MINE_PICTURE, GRENADE_PICTURE, GUN_PICTURE = (
+    "Baseball Bat", "Fragmentation Mine", "Fragmentation Grenade", "10mm Pistol")
 
 log = logging.getLogger("pipboy")
 
@@ -497,6 +517,57 @@ def card(item):
     return head + rows
 
 
+def words(name):
+    """A name's words, for matching weapon names: ".44 Pistol" is .44 pistol."""
+    return re.findall(r"[a-z0-9.]+", name.lower().replace("'", "").replace("\u2019", ""))
+
+
+_pictures = None
+
+
+def pictures():
+    """The weapon pictures in art/ (tools/fetch-art.py writes weapons.json):
+    ([(words of a name, picture)], {name: picture}); empty without art/."""
+    global _pictures
+    if _pictures is None:
+        try:
+            with open(os.path.join(HERE, "art", "weapons.json"), encoding="utf-8") as fh:
+                index = json.load(fh)
+        except (OSError, ValueError):
+            index = {}
+        by_name = {n: "weapons/" + slug for slug, names in index.items() for n in names}
+        by_name.update({n: by_name[other] for n, other in PICTURE_NAMES.items() if other in by_name})
+        keys = sorted(((frozenset(words(n)), picture) for n, picture in by_name.items()),
+                      key=lambda k: -len(k[0]))  # the fullest name first
+        _pictures = (keys, by_name)
+    return _pictures
+
+
+def weapon_picture(item, name):
+    """The picture for a weapon: the picture whose weapon name's words are
+    all in this name ("Hardened Combat Rifle" is the Combat Rifle, a unique
+    weapon its own picture); else the picture for its ammo; else one for its
+    kind (melee, mine, grenade, gun). None only without art/."""
+    keys, by_name = pictures()
+    if not keys:
+        return None
+    have = set(words(name))
+    for key, picture in keys:
+        if key <= have:
+            return picture
+    ammo, melee = "", False
+    for c in items(child(item, "itemCardInfoList")):
+        if val(c, "damageType") == 10:
+            ammo = (val(c, "text", default="") or "").lower()
+        melee = melee or val(c, "text") == "$speed"
+    for part, weapon in AMMO_PICTURES:
+        if ammo and part in ammo and weapon in by_name:
+            return by_name[weapon]
+    kind = (MELEE_PICTURE if melee else GUN_PICTURE if ammo
+            else MINE_PICTURE if "mine" in have else GRENADE_PICTURE)
+    return by_name.get(kind)
+
+
 def category(flags):
     for name, bits in CATEGORIES:
         if flags & bits:
@@ -516,13 +587,16 @@ def build_inventory(root):
         seen.add(item.pipId)
         flags = val(item, "filterFlag", default=0)
         fav = val(item, "favorite", default=-2)
-        out[category(flags)].append({
-            "id": item.pipId, "name": (val(item, "text", default="") or "").strip(),
+        cat = category(flags)
+        name = (val(item, "text", default="") or "").strip()
+        out[cat].append({
+            "id": item.pipId, "name": name,
             "count": val(item, "count", default=1), "equipped": (val(item, "equipState", default=0) or 0) > 0,
             "legendary": bool(val(item, "isLegendary", default=False)),
             "holotape": bool(flags & 1 << 13),
             "fav": fav if isinstance(fav, int) and fav >= 0 else None,
-            "card": card(item)})
+            "card": card(item),
+            "picture": weapon_picture(item, name) if cat == "weapons" else None})
     out["components"] = [{"name": val(c, "text", default=""), "count": val(c, "count", default=0)}
                          for c in items(child(inv, "InvComponents"))]
     return out

@@ -1,5 +1,6 @@
 singleton Pip 1.0 Pip.qml
 PipText 1.0 PipText.qml
+PipArt 1.0 PipArt.qml
 PipButton 1.0 PipButton.qml
 Meter 1.0 Meter.qml
 TabRow 1.0 TabRow.qml

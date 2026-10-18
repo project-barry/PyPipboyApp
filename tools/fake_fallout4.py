@@ -115,6 +115,7 @@ ITEMS = [
     # name, filterFlag, count, equipped, card
     ("10mm Pistol", 2, 1, True, [("$dmg", 18, 1), ("10mm", 120, 10), ("$ROF", 46.0), ("$rng", 83.0), ("$acc", 60.0), ("$wt", 4.2), ("$val", 53)]),
     ("Pipe Rifle", 2, 1, False, [("$dmg", 9, 1), (".38", 34, 10), ("$ROF", 16.0), ("$rng", 152.0), ("$acc", 72.0), ("$wt", 6.5), ("$val", 32)]),
+    ("Hardened Combat Rifle", 2, 1, False, [("$dmg", 33, 1), (".45", 90, 10), ("$ROF", 22.0), ("$rng", 160.0), ("$acc", 68.0), ("$wt", 12.1), ("$val", 168)]),
     ("Laser Musket", 2, 1, False, [("$dmg", 30, 4), ("Fusion Cell", 40, 10), ("$ROF", 3.0), ("$rng", 191.0), ("$acc", 75.0), ("$wt", 12.6), ("$val", 57)]),
     ("Baseball Bat", 2, 1, False, [("$dmg", 12, 1), ("$speed", "$MEDIUM"), ("$wt", 3.0), ("$val", 25)]),
     ("Frag Grenade", 2, 4, False, [("$dmg", 151, 1), ("$ROF", 0.0), ("$rng", 93.6), ("$wt", 0.5), ("$val", 50)]),

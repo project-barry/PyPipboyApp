@@ -7,18 +7,24 @@ Item {
     readonly property var p: Pip.player
     readonly property var limbs: p ? p.limbs : ({})
 
-    // The figure: a plain outline drawn here (the game's Vault Boy is
-    // Bethesda's), with each limb's condition beside it.
+    // The figure: the Vault Boy from art/ (tools/fetch-art.py), or a plain
+    // outline drawn here without it, with each limb's condition beside it.
     Item {
         id: body
         width: parent.width * 0.5
         height: parent.height
 
+        PipArt {
+            id: vaultBoy
+            anchors.fill: figure
+            name: "vaultboy"
+        }
         Canvas {
             id: figure
             anchors.centerIn: parent
             width: 300 * Pip.s
             height: 520 * Pip.s
+            visible: !vaultBoy.ready
             property var limbs: page.limbs
             property color ink: Pip.color
             property color hurt: Pip.faint

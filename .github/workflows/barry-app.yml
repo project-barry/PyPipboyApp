@@ -28,6 +28,10 @@ jobs:
           for f in barry-app barry_apps.py; do
             curl -fsSL "https://raw.githubusercontent.com/project-barry/barry-launcher-apps/main/tools/$f" -o ".barry-tools/$f"
           done
+      - name: Pip-Boy art
+        run: |
+          pip install "pillow>=11,<13"
+          python3 tools/fetch-art.py
       - name: Check
         run: python3 .barry-tools/barry-app check barry
       - name: Service against the stand-in game
@@ -43,6 +47,8 @@ jobs:
             case "$state" in "connected 8") break;; esac
           done
           [ "$state" = "connected 8" ]
+          curl -fs -H "X-Barry-Token: ci" "http://127.0.0.1:47900/view?since=0" \
+            | python3 -c "import json,sys; w=json.load(sys.stdin)['sections']['inventory']['weapons']; bare=[x['name'] for x in w if not x['picture']]; print('no picture:', bare); sys.exit(1 if bare else 0)"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:47900/view)" = 403
           curl -fs -H "X-Barry-Token: ci" -d '{"do":"stimpak"}' http://127.0.0.1:47900/action
       - name: Pack

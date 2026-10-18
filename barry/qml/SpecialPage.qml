@@ -28,6 +28,12 @@ ListPage {
                                 + Math.abs(page.picked.modifier) + " from effects" : ""
             color: Pip.dim
         }
+        PipArt {
+            width: parent.width
+            height: 360 * Pip.s
+            visible: ready
+            name: page.picked ? "special/" + page.picked.name.toLowerCase() : ""
+        }
         PipText {
             width: parent.width
             wrapMode: Text.Wrap

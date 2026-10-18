@@ -18,17 +18,20 @@ ListPage {
     onItemChanged: confirmDrop = false
 
     Column {
+        id: detail
         width: parent.width
         spacing: 16 * Pip.s
         visible: page.item !== null
 
         PipText {
+            id: title
             width: parent.width
             text: page.item ? page.item.name : ""
             font.pixelSize: Pip.large
             font.weight: Font.Bold
         }
         PipText {
+            id: flags
             text: page.item ? [page.item.equipped ? "Equipped" : "",
                                page.item.legendary ? "Legendary" : "",
                                page.item.fav !== null ? "Favorite " + (page.item.fav + 1) : "",
@@ -36,11 +39,21 @@ ListPage {
             color: Pip.dim
             font.pixelSize: Pip.small
         }
+        // The weapon's picture, in the room the rest leaves.
+        PipArt {
+            width: parent.width
+            height: Math.max(90 * Pip.s, Math.min(220 * Pip.s, detail.parent.height - title.height - flags.height
+                                                               - itemCard.height - buttons.height - 4 * detail.spacing))
+            visible: ready
+            name: page.item && page.item.picture ? page.item.picture : ""  // service.py weapon_picture
+        }
         Card {
+            id: itemCard
             width: parent.width
             rows: page.item ? page.item.card : []
         }
         Row {
+            id: buttons
             spacing: 16 * Pip.s
             PipButton {
                 visible: page.wearable || page.category === "aid" || (page.item !== null && page.item.holotape)

@@ -29,6 +29,25 @@ Pip-Boy phone app.
 The world map is a grid with markers and has no picture. The game's map picture belongs to Bethesda,
 so it isn't included. That is also why the original PyPipboyApp's repository ships no graphics.
 
+The Vault Boy on STATUS, the S.P.E.C.I.A.L. pictures and the weapon pictures are Bethesda's too, so
+this repository doesn't carry them either. `tools/fetch-art.py` downloads them at build time into
+`barry/art/`, which git ignores, checking each file against its hash. The release zip has them.
+
+- The Vault Boy and S.P.E.C.I.A.L. come from
+  [aviralmehrotra/Fallout4-Pip-Boy](https://github.com/aviralmehrotra/Fallout4-Pip-Boy) at a fixed commit.
+- The weapons come from the [Fallout Wiki](https://fallout.wiki/wiki/Fallout_4_Weapons): 159 pictures
+  for the Fallout 4 weapons, add-ons and Creation Club included.
+
+The app paints them in the Pip-Boy color. The service picks each weapon's picture
+(`weapon_picture` in `service.py`):
+
+1. By name. The picture fits when all the words of one of its weapon names are in the weapon's name, so
+   "Hardened Combat Rifle" shows the combat rifle, and a unique weapon shows its own picture.
+2. Otherwise by ammo, so a renamed gun still shows its base gun: fusion cells show the laser gun.
+3. Otherwise by kind: a baseball bat for melee, a mine, a grenade, or the 10mm pistol for any other gun.
+
+Without `barry/art/` the app draws its own plain figure and shows no pictures.
+
 ## Using it
 
 1. In Fallout 4, turn on **Settings › Gameplay › Pip-Boy App** and load a save.
@@ -68,6 +87,7 @@ two parts:
 and acts on the app's commands.
 
 ```sh
+python3 -I tools/fetch-art.py              # once: the pictures (needs Pillow)
 python3 tools/fake_fallout4.py &           # the "game", on port 27000
 barry-app run barry                        # the app and its service, in a window
 ```
